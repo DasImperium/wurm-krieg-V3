@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Apple, Leaf, Trees, ArrowLeft, TrendingUp, Shield, Trophy } from "lucide-react";
+import { Apple, Leaf, ArrowLeft, TrendingUp, Shield, Trophy } from "lucide-react";
 import {
   SEGMENTE,
   SEGMENT_REIHENFOLGE,
@@ -763,5 +763,3 @@ function EndBildschirm({
   );
 }
 
-// Kleine Trees-Anwendung um Import zu nutzen
-export const _Trees = Trees;
