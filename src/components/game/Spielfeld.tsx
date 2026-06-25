@@ -740,16 +740,35 @@ function segmentFarbe(key: SegmentKey): string {
   return map[key];
 }
 
+function SegmentIcon({ keyName, className }: { keyName: SegmentKey; className?: string }) {
+  const cls = className ?? "h-5 w-5 text-white drop-shadow";
+  switch (keyName) {
+    case "beine": return <Footprints className={cls} />;
+    case "panzer": return <Shield className={cls} />;
+    case "kettenhemd": return <LinkIcon className={cls} />;
+    case "heilung": return <HeartPulse className={cls} />;
+    case "schallpistole": return <Volume2 className={cls} />;
+    case "laser": return <Zap className={cls} />;
+    case "kastanie": return <Bomb className={cls} />;
+    case "raketenwerfer": return <Rocket className={cls} />;
+  }
+}
+
 function Baum({ seite, name, farbe }: { seite: "links" | "rechts"; name: string; farbe: "emerald" | "rose" }) {
   const pos = seite === "links" ? "left-0" : "right-0";
   const krone = farbe === "emerald" ? "bg-emerald-700" : "bg-rose-700";
+  const kroneHell = farbe === "emerald" ? "bg-emerald-500" : "bg-rose-500";
   return (
-    <div className={`absolute bottom-0 ${pos} flex w-24 flex-col items-center`}>
-      <div className={`h-24 w-24 rounded-full ${krone} shadow-lg`} />
-      <div className="-mt-4 h-20 w-8 bg-amber-900">
-        <div className="mx-auto mt-8 h-10 w-5 rounded-t-full bg-emerald-950" />
+    <div className={`absolute bottom-0 ${pos} z-20 flex w-28 flex-col items-center`}>
+      <div className="relative">
+        <div className={`h-28 w-28 rounded-full ${krone} shadow-2xl ring-4 ring-emerald-900/40`} />
+        <div className={`absolute left-3 top-3 h-8 w-8 rounded-full ${kroneHell} opacity-60`} />
+        <div className={`absolute right-4 top-6 h-5 w-5 rounded-full ${kroneHell} opacity-60`} />
       </div>
-      <div className="absolute -top-2 rounded bg-emerald-950 px-2 py-0.5 text-[10px] font-bold text-white">
+      <div className="-mt-6 h-24 w-10 rounded bg-gradient-to-b from-amber-800 to-amber-950 shadow-inner">
+        <div className="mx-auto mt-10 h-12 w-6 rounded-t-full bg-amber-950" />
+      </div>
+      <div className="absolute -top-3 rounded bg-emerald-950 px-2 py-0.5 text-[10px] font-bold text-white shadow">
         {name}
       </div>
     </div>
@@ -758,18 +777,25 @@ function Baum({ seite, name, farbe }: { seite: "links" | "rechts"; name: string;
 
 function KopfSymbol({ farbe }: { farbe: string }) {
   return (
-    <div className="relative h-10 w-10 rounded-full bg-emerald-600 ring-2 ring-emerald-900">
-      <div className={`absolute -top-2 left-1 h-3 w-8 rounded-md ${farbe} shadow`} />
-      <div className="absolute left-2 top-3 h-1.5 w-1.5 rounded-full bg-white" />
-      <div className="absolute right-2 top-3 h-1.5 w-1.5 rounded-full bg-white" />
+    <div className="relative h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-700 ring-2 ring-emerald-900 shadow-md">
+      <div className={`absolute -top-2 left-0.5 h-3 w-9 rounded-md ${farbe} shadow`} />
+      <Smile className="absolute inset-0 m-auto h-6 w-6 text-emerald-950" />
     </div>
   );
 }
-function SegmentSymbol({ farbe }: { farbe: string }) {
-  return <div className={`h-10 w-10 rounded-full ${farbe} ring-2 ring-emerald-900`} />;
+function SegmentSymbolMitIcon({ keyName }: { keyName: SegmentKey }) {
+  return (
+    <div className={`relative flex h-10 w-10 items-center justify-center rounded-full ${segmentFarbe(keyName)} ring-2 ring-emerald-900 shadow`}>
+      <SegmentIcon keyName={keyName} />
+    </div>
+  );
 }
 function SchwanzSymbol() {
-  return <div className="h-8 w-8 rounded-full bg-emerald-700 ring-2 ring-emerald-900" />;
+  return (
+    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-800 ring-2 ring-emerald-900 shadow">
+      <Leaf className="h-4 w-4 -rotate-45 text-emerald-100" fill="currentColor" />
+    </div>
+  );
 }
 
 function WurmAnzeige({ wurm }: { wurm: Wurm }) {
