@@ -105,21 +105,3 @@ function _unused() {
   };
   return ignore;
 }
-          };
-          aktualisiere(neu);
-          setBildschirm("hauptmenue");
-        }}
-      />
-    );
-  }
-  return (
-    <Hauptmenue
-      fortschritt={fortschritt}
-      onAenderung={aktualisiere}
-      onStart={(lvl) => {
-        setLevel(lvl);
-        setBildschirm("spielfeld");
-      }}
-    />
-  );
-}
