@@ -608,7 +608,7 @@ export function Spielfeld({ fortschritt, level, onZurueck, onSieg, onNiederlage 
     setBauSegmente((s) => s.filter((_, i) => i !== index));
   };
   const bauKosten = useMemo(
-    () => bauSegmente.reduce((acc, s) => acc + SEGMENTE[s.key].kosten, 0),
+    () => bauSegmente.reduce((acc, s) => acc + segmentKosten(s.key, s.stufe), 0),
     [bauSegmente],
   );
   const starteWurm = () => {
@@ -637,8 +637,8 @@ export function Spielfeld({ fortschritt, level, onZurueck, onSieg, onNiederlage 
   };
 
   const handleSiegRueckkehr = useCallback(() => {
-    const belohnung = Math.ceil(effLevel / 3) + matchAepfel;
-    // Bonus-Sternanis bei höheren Levels selten
+    // Spec: 5 garantierte Äpfel + alle im Match gesammelten + Level-Bonus.
+    const belohnung = 5 + matchAepfel + Math.floor(effLevel / 5);
     const sternBonus = matchSternanis + (effLevel >= 30 ? (Math.random() < 0.4 ? 1 : 0) : 0);
     onSieg(belohnung, sternBonus);
   }, [onSieg, matchAepfel, matchSternanis, effLevel]);
@@ -831,7 +831,7 @@ export function Spielfeld({ fortschritt, level, onZurueck, onSieg, onNiederlage 
                 <SegmentSymbolMitIcon keyName={key} />
                 <span className="mt-1 font-bold">{def.name}</span>
                 <span className="text-[10px] text-emerald-700">Stufe {stufe}</span>
-                <span className="text-[10px] text-emerald-900">{def.kosten} Bl.</span>
+                <span className="text-[10px] text-emerald-900">{segmentKosten(key, stufe)} Bl.</span>
               </button>
             );
           })}
