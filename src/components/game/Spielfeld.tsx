@@ -85,6 +85,20 @@ const SPIELER_BASIS_X = 3;
 const GEGNER_BASIS_X = 97;
 const ANZAHL_PFADE = 5;
 
+// Geschätzte halbe Wurmlänge in % der Karte.
+function halbeWurmLaenge(w: Wurm): number {
+  return ((w.segmente.length + 2) * 2.0) / 2;
+}
+// Vorderste Stelle des Kopfes Richtung feindlicher Basis.
+function kopfX(w: Wurm): number {
+  const h = halbeWurmLaenge(w);
+  return w.seite === "spieler" ? w.x + h : w.x - h;
+}
+// Kosten steigen leicht mit Forschungsstufe.
+function segmentKosten(key: SegmentKey, stufe: number): number {
+  return Math.round(SEGMENTE[key].kosten * (1 + (stufe - 1) * 0.2));
+}
+
 let wurmIdZaehler = 1;
 let fallIdZaehler = 1;
 let mineIdZaehler = 1;
