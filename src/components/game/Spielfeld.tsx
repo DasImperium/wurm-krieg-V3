@@ -342,7 +342,7 @@ export function Spielfeld({ fortschritt, level, onZurueck, onSieg, onNiederlage 
         r.aiSpawn = 0;
         const wurm = zufallsWurmGegner(fortschritt.upgrades, effLevel, istProzedural ? wlr : undefined);
         const kostenBlaetter = wurm.segmente.reduce(
-          (acc, s) => acc + SEGMENTE[s.key].kosten,
+          (acc, s) => acc + segmentKosten(s.key, s.stufe),
           0,
         );
         // AI muss sich leisten können
