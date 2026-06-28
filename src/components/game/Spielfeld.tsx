@@ -637,11 +637,10 @@ export function Spielfeld({ fortschritt, level, onZurueck, onSieg, onNiederlage 
   };
 
   const handleSiegRueckkehr = useCallback(() => {
-    // Spec: 5 garantierte Äpfel + alle im Match gesammelten + Level-Bonus.
-    const belohnung = 5 + matchAepfel + Math.floor(effLevel / 5);
-    const sternBonus = matchSternanis + (effLevel >= 30 ? (Math.random() < 0.4 ? 1 : 0) : 0);
-    onSieg(belohnung, sternBonus);
-  }, [onSieg, matchAepfel, matchSternanis, effLevel]);
+    // Spec: Siegesbelohnung = 5 Äpfel (Basis) + bis zu 2 gesammelte Äpfel
+    const belohnung = 5 + matchAepfel;
+    onSieg(belohnung, 0); // Kein Sternanis bei normalem Spiel
+  }, [onSieg, matchAepfel]);
 
   const maxSpielerBasis = BASIS_HP_GRUND + VERTEIDIGUNG_BONUS[verteidigungsStufe];
 
@@ -851,7 +850,7 @@ export function Spielfeld({ fortschritt, level, onZurueck, onSieg, onNiederlage 
         <EndBildschirm
           titel="Sieg im Krieg der Wuermer!"
           farbe="from-yellow-200 to-yellow-500"
-          beschreibung={`Belohnung: +${5 + matchAepfel + Math.floor(effLevel / 5)} Rote Äpfel.`}
+          beschreibung={`Belohnung: +${5 + matchAepfel} Rote Äpfel.`}
           aktion={handleSiegRueckkehr}
           aktionLabel="Zurück zum Hauptmenü"
         />
@@ -1035,4 +1034,3 @@ function EndBildschirm({
     </div>
   );
 }
-
