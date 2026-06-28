@@ -1,8 +1,9 @@
 /**
  * Game Components Index
- * Exportiert alle Komponenten und Utilities für das Spiel
+ * Exportiert alle Komponenten und Utilities für das Spiel sauber ohne Kreis-Importe.
  */
 
+// 1. Typen exportieren
 export type {
   Segment,
   Wurm,
@@ -14,6 +15,7 @@ export type {
   SpielRefs,
 } from "./types";
 
+// 2. Konstanten exportieren
 export {
   PRODUKTION_KOSTEN,
   VERTEIDIGUNG_KOSTEN,
@@ -29,8 +31,9 @@ export {
   ANZAHL_PFADE,
 } from "./constants";
 
+// 3. Hilfsfunktionen (wurmUtils) exportieren
 export {
-  resetIdZaehler,
+  getNextIdZaehler,
   getNextWurmId,
   getNextFallId,
   getNextMineId,
@@ -51,14 +54,20 @@ export {
   effektIdZaehler,
 } from "./wurmUtils";
 
+// 4. Allgemeine Utilities exportieren
 export { segmentFarbe } from "./utils";
 
-export { Spielfeld } from "./Spielfeld";
+// 5. Haupt-Ansichten exportieren
+export { default as Hauptmenue } from "./Hauptmenue";
+export { default as Spielfeld } from "./Spielfeld";
+export { default as Ueberfall } from "./Ueberfall";
+export { default as AdminPanel } from "./AdminPanel";
 
-export { Baum } from "./components/Baum";
-export { KopfSymbol } from "./components/KopfSymbol";
-export { SchwanzSymbol } from "./components/SchwanzSymbol";
-export { SegmentIcon } from "./components/SegmentIcon";
-export { SegmentSymbolMitIcon } from "./components/SegmentSymbolMitIcon";
-export { WurmAnzeige } from "./components/WurmAnzeige";
-export { EndBildschirm } from "./components/EndBildschirm";
+// 6. Unterkomponenten exportieren (Diese liegen laut Struktur im Unterordner "./components/")
+export { default as Baum } from "./components/Baum";
+export { default as KopfSymbol } from "./components/KopfSymbol";
+export { default as SchwanzSymbol } from "./components/SchwanzSymbol";
+export { default as SegmentIcon } from "./components/SegmentIcon";
+export { default as SegmentSymbolMitIcon } from "./components/SegmentSymbolMitIcon";
+export { default as Wurmanzeige } from "./components/Wurmanzeige";
+export { default as EndBildschirm } from "./components/EndBildschirm";
