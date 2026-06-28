@@ -2,11 +2,19 @@
  * Game Components Index
  */
 
-// 1. REINE Typen exportieren (Falls diese in types.ts als "interface" oder "type" definiert sind)
+// 1. REINE Typen exportieren
 export type {
   SpielfeldProps,
   SpielRefs,
 } from "./types";
+
+export type {
+  SegmentKey,
+  SegmentDef,
+  Upgrades,
+  UeberfallFortschritt,
+  GespeicherterFortschritt
+} from "./segments";
 
 // 2. Konstanten exportieren
 export {
@@ -23,6 +31,16 @@ export {
   GEGNER_BASIS_X,
   ANZAHL_PFADE,
 } from "./constants";
+
+export {
+  UPGRADE_KOSTEN,
+  MAX_STUFE,
+  SEGMENTE,
+  SEGMENT_REIHENFOLGE,
+  STANDARD_UPGRADES,
+  STANDARD_UEBERFALL,
+  SPEICHER_SCHLUESSEL
+} from "./segments";
 
 // 3. Hilfsfunktionen exportieren
 export {
@@ -47,8 +65,16 @@ export {
   effektIdZaehler,
 } from "./wurmUtils";
 
-// 4. Utilities exportieren
-export { segmentFarbe } from "./utils";
+// 4. Speicher- und Ladefunktionen exportieren
+export {
+  standardFortschritt,
+  ladeFortschritt,
+  speichereFortschritt,
+  segmentFarbe
+} from "./utils"; // Falls segmentFarbe in utils liegt
+
+// Alternativ aus segments falls dort definiert:
+export { ladeFortschritt as ladeSpiel, speichereFortschritt as speichereSpiel } from "./segments";
 
 // 5. Haupt-Ansichten exportieren
 export { default as Hauptmenue } from "./Hauptmenue";
