@@ -15,19 +15,59 @@ interface Schmetterling { id: number; x: number; y: number; hp: number; maxHp: n
 
 const TICK = 50;
 
-function dropTable(level: number) {
-  const nichts = level <= 15 ? Math.max(20, 50 - level * 2) : Math.max(5, 20 - Math.floor((level - 15) * 1.5));
-  const stern = Math.min(8, 1 + Math.floor(level / 3));
-  const gruen = Math.min(25, 5 + Math.floor(level * 0.8));
-  const heal = Math.min(15, 6 + Math.floor(level / 4));
-  const gift = Math.max(3, 15 - Math.floor(level / 2));
-  const rest = 100 - (stern + gruen + heal + gift + nichts);
-  const rot = Math.max(10, rest);
+// Dynamische Wahrscheinlichkeiten basierend auf dem Forschungs-Level
+function dropTable(level: number, sterneBereitsGespawnt: number) {
+  let rot = 0;
+  let gruen = 0;
+  let stern = 0;
+  let heal = 0;
+  let gift = 0;
+
+  // 1. Sternanis Logik (Maximal 2 pro Runde)
+  if (sterneBereitsGespawnt < 2) {
+    if (level <= 10) {
+      stern = 0.03;
+    } else {
+      // Ab Level 11 steigt die Chance um 0.5% je Level
+      stern = 0.03 + (level - 10) * 0.5;
+    }
+  }
+
+  // 2. Stufenabhängiges Verteilungssystem
+  if (level <= 5) {
+    rot = 45; // Rest ist Nichts
+  } else if (level <= 11) {
+    // Grüne Äpfel kommen selten hinzu und steigen leicht
+    gruen = Math.min(8, 2 + (level - 5) * 1.2);
+    rot = 50;
+  } else if (level <= 19) {
+    // Giftäpfel kommen vereinzelt hinzu
+    gruen = Math.min(15, 8 + (level - 11) * 1.5);
+    gift = Math.min(6, 2 + (level - 11) * 0.8);
+    rot = 45;
+  } else if (level <= 29) {
+    // Heilungsäpfel kommen selten hinzu, viele Giftäpfel
+    gruen = Math.min(22, 15 + (level - 19) * 0.7);
+    gift = Math.min(20, 10 + (level - 19) * 1.2);
+    heal = Math.min(3, 1 + (level - 19) * 0.2); // Absichtlich sehr niedrig gehalten
+    rot = 35;
+  } else {
+    // Ab Level 30: Giftapfelrate reduziert sich leicht pro Stufe wieder
+    const giftMinderung = (level - 29) * 0.4;
+    gift = Math.max(8, 20 - giftMinderung);
+    gruen = Math.min(30, 22 + (level - 29) * 0.8);
+    heal = Math.min(4, 3 + (level - 29) * 0.1);
+    rot = 30;
+  }
+
+  const summeGefüllt = rot + gruen + stern + heal + gift;
+  const nichts = Math.max(5, 100 - summeGefüllt);
+
   return { rot, gruen, stern, heal, gift, nichts };
 }
 
-function wuerfleItem(level: number): ItemArt | null {
-  const t = dropTable(level);
+function wuerfleItem(level: number, sterneBereitsGespawnt: number): ItemArt | null {
+  const t = dropTable(level, sterneBereitsGespawnt);
   const r = Math.random() * 100;
   let acc = 0;
   if (r < (acc += t.rot)) return "rot";
@@ -174,13 +214,15 @@ function UeberfallMatch({ fortschritt, onAenderung, onFertig }: { fortschritt: G
   const maxSchm = Math.min(12, 4 + u.upgradeStufe * 2);
   const initial = Math.min(u.schmetterlingeBereit, maxSchm);
   
-  const baumMax = 25000 + level * 8000;
+  // Höhere Baum-HP-Skalierung, damit er in niedrigen Stufen nicht fällt
+  const baumMax = 35000 + level * 12000;
   const [baumHp, setBaumHp] = useState(baumMax);
   const [baumWackel, setBaumWackel] = useState(false);
   const [mussMitzaehlenAngriff, setMussMitzaehlenAngriff] = useState(0);
   const [istPausiert, setIstPausiert] = useState(false);
   
   const [giftImmunTimer, setGiftImmunTimer] = useState(0);
+  const [anzahlSterneInRunde, setAnzahlSterneInRunde] = useState(0);
 
   const [schm, setSchm] = useState<Schmetterling[]>(() =>
     Array.from({ length: initial }, (_, i) => {
@@ -206,33 +248,27 @@ function UeberfallMatch({ fortschritt, onAenderung, onFertig }: { fortschritt: G
   const beuteRef = useRef(beute);
   beuteRef.current = beute;
 
-  // Zentralisiertes Beenden der Runde (jetzt auch mit dem dynamischen Rückzugs-Schlüssel)
   const beendeMatch = useCallback((sieg: boolean, istVorzeitigerRueckzug = false) => {
     const final = beuteRef.current;
-    const faktor = sieg ? 1 : 0.05; // 100% bei Sieg, 5% bei kompletter Niederlage
+    const faktor = sieg ? 1 : 0.05;
     const aepfel = Math.floor((final.rot + final.gruen * 5) * faktor);
     const sternanis = Math.floor(final.stern * faktor);
     
     let bereitNeu = u.schmetterlingeBereit;
 
     if (istVorzeitigerRueckzug) {
-      // SCHLÜSSEL FÜR RÜCKZUG (50% - 100% Verlust)
-      // Verhältnis Baum-HP zu max. Baum-HP
       const baumHpFaktor = baumHp / baumMax; 
-      // Durchschnittliche verbleibende Schmetterlings-HP der noch lebenden
       const lebendeSchm = schm.filter(s => !s.fallend);
       const schmHpFaktor = lebendeSchm.length > 0 
         ? (lebendeSchm.reduce((acc, curr) => acc + curr.hp, 0) / lebendeSchm.length) / 3000
         : 0;
 
-      // Je mehr Leben der Baum hat und je weniger die Schmetterlinge, desto höher die Todesrate.
       const verlustBasis = 0.5 + (baumHpFaktor * 0.5) - (schmHpFaktor * 0.15);
-      const finalerVerlustFaktor = Math.max(0.5, Math.min(1.0, verlustBasis)); // Gedeckelt zwischen 50% und 100%
+      const finalerVerlustFaktor = Math.max(0.5, Math.min(1.0, verlustBasis));
 
       const getöteteSchmetterlinge = Math.ceil(initial * finalerVerlustFaktor);
       bereitNeu = Math.max(0, u.schmetterlingeBereit - getöteteSchmetterlinge);
     } else {
-      // Regulärer Spielausgang (Sieg oder gewartet bis alle Schmetterlinge abgestürzt sind)
       const ueberlebt = schm.filter((s) => s.hp > 0 && !s.fallend).length;
       const verbraucht = initial - ueberlebt;
       bereitNeu = Math.max(0, u.schmetterlingeBereit - verbraucht);
@@ -258,32 +294,38 @@ function UeberfallMatch({ fortschritt, onAenderung, onFertig }: { fortschritt: G
     const handle = window.setInterval(() => {
       setGiftImmunTimer((t) => Math.max(0, t - TICK));
 
-      if (Math.random() < 0.12) {
-        const art = wuerfleItem(level);
+      // Items spawnen mit verdoppelter Fallgeschwindigkeit (vy * 2)
+      if (Math.random() < 0.15) {
+        const art = wuerfleItem(level, anzahlSterneInRunde);
         if (art) {
           let vy = 0.4;
-          if (art === "stern") vy = 1.8;
+          if (art === "stern") {
+            vy = 1.8;
+            setAnzahlSterneInRunde((s) => s + 1);
+          }
           else if (art === "heal") vy = 1.4;
           else if (art === "gruen") vy = 1.1;
           else if (art === "rot") vy = 0.8;
           else if (art === "gift") vy = 0.5;
 
-          setItems((prev) => [...prev, { id: itemIdRef.current++, art, x: 5 + Math.random() * 90, y: 16, vy }]);
+          // Multipliziert mit Faktor 2 für Hektik
+          setItems((prev) => [...prev, { id: itemIdRef.current++, art, x: 5 + Math.random() * 90, y: 16, vy: vy * 2 }]);
         }
       }
       
       setItems((prev) => prev.map((it) => ({ ...it, y: it.y + it.vy })).filter((it) => it.y < 105));
 
       setSchm((prev) => {
-        // Erst wenn das Array wirklich leer ist (alle herausgefiltert bei y >= 110), endet das Match
         if (prev.length === 0) {
           setStatus("niederlage");
           return prev;
         }
         
         const lebend = prev.filter((s) => !s.fallend);
+        
+        // Schaden der Schmetterlinge am Baum reduziert, damit er erst später bezwingbar wird
         if (lebend.length > 0 && Math.random() < 0.2) {
-          setBaumHp((h) => Math.max(0, h - (6 + level * 2) * lebend.length));
+          setBaumHp((h) => Math.max(0, h - (3 + level * 0.7) * lebend.length));
           setBaumWackel(true);
           setTimeout(() => setBaumWackel(false), 150);
         }
@@ -304,13 +346,14 @@ function UeberfallMatch({ fortschritt, onAenderung, onFertig }: { fortschritt: G
           let neueHp = s.hp;
           let amWackeln = s.wackelTimer > 0 ? s.wackelTimer - 1 : 0;
 
+          // Schaden vom Baum an Schmetterlingen erhöht (Gegenwehr-Balancing)
           if (s.id === zielLinks || s.id === zielRechts) {
-            neueHp -= 1.35; 
+            neueHp -= (2.5 + level * 0.2); 
             if (Math.random() < 0.2) amWackeln = 4;
           }
 
           if (mussMitzaehlenAngriff === 0) {
-            neueHp -= 12;
+            neueHp -= (18 + level * 0.5);
             amWackeln = 5;
           }
 
@@ -332,7 +375,7 @@ function UeberfallMatch({ fortschritt, onAenderung, onFertig }: { fortschritt: G
 
     }, TICK);
     return () => window.clearInterval(handle);
-  }, [status, level, mussMitzaehlenAngriff, istPausiert]);
+  }, [status, level, mussMitzaehlenAngriff, istPausiert, anzahlSterneInRunde]);
 
   useEffect(() => {
     if (status === "laeuft" && baumHp <= 0) {
@@ -350,7 +393,7 @@ function UeberfallMatch({ fortschritt, onAenderung, onFertig }: { fortschritt: G
   }, [status, beendeMatch]);
 
   const klickItem = (id: number) => {
-    if (istPausiert) return; // Im Pause-Modus können Items nicht geklickt werden
+    if (istPausiert) return;
     const it = items.find((i) => i.id === id);
     if (!it) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
@@ -391,12 +434,10 @@ function UeberfallMatch({ fortschritt, onAenderung, onFertig }: { fortschritt: G
 
       <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between bg-black/60 px-4 py-2 text-white text-xs backdrop-blur-sm">
         <div className="flex gap-2">
-          {/* Vorzeitiger Rückzug-Knopf mit dynamischem Schlüssel */}
           <button type="button" onClick={() => beendeMatch(false, true)} className="rounded bg-purple-800 px-3 py-1 font-semibold hover:bg-purple-700 transition">
             Aufgeben
           </button>
           
-          {/* Pause-Button */}
           <button type="button" onClick={() => setIstPausiert(!istPausiert)} className="flex items-center gap-1 rounded bg-amber-600 px-3 py-1 font-semibold hover:bg-amber-500 transition">
             {istPausiert ? <PlayCircle className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
             {istPausiert ? "Weiter" : "Pause"}
@@ -423,9 +464,8 @@ function UeberfallMatch({ fortschritt, onAenderung, onFertig }: { fortschritt: G
             transform: `translate(-50%, -50%) ${s.wackelTimer > 0 ? "skewX(12deg) scale(1.1)" : ""}` 
           }}>
           <div className="relative">
-            
             <div className={`absolute -left-3 top-0 h-6 w-4 rounded-full bg-pink-400 opacity-90 ${s.fallend ? "scale-x-[0.1] origin-right rotate-[70deg]" : "animate-pulse"}`} style={{ transform: !s.fallend ? "rotate(-15deg)" : "" }} />
-            <div className={`absolute -right-3 top-0 h-6 w-4 rounded-full bg-pink-400 opacity-90 ${s.fallend ? "scale-x-[0.1] origin-left rotate-[-70deg]" : "animate-pulse"}`} style={{ transform: !s.fallend ? "rotate(15deg)" : "" }} />
+            <div className={`absolute -right-3 top-0 h-6 w-4 rounded-full bg-pink-400 opacity-90 ${s.fallend ? "scale-x-[0.1] origin-left rotate-[70deg]" : "animate-pulse"}`} style={{ transform: !s.fallend ? "rotate(15deg)" : "" }} />
             
             <div className={`relative z-10 h-3 w-3 rounded-full ${s.fallend ? "bg-stone-700" : giftImmunTimer > 0 ? "bg-red-500 shadow-[0_0_8px_#EF4444] animate-ping" : "bg-purple-900 shadow-[0_0_6px_#F472B6]"}`} />
             
@@ -451,12 +491,19 @@ function UeberfallMatch({ fortschritt, onAenderung, onFertig }: { fortschritt: G
         </button>
       ))}
 
-      {/* Visueller Pause-Zustand */}
+      {/* Visueller Pause-Zustand mit funktionierendem Interaktions-Button */}
       {istPausiert && status === "laeuft" && (
-        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs text-white">
-          <Pause className="h-14 w-14 text-amber-400 animate-pulse mb-2" />
-          <h2 className="text-2xl font-black tracking-widest">SPIEL PAUSIERT</h2>
-          <p className="text-xs text-gray-300 mt-1">Klicke oben auf "Weiter" um fortzufahren</p>
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/75 backdrop-blur-xs text-white animate-fadeIn">
+          <div className="bg-purple-950/90 border border-pink-500/30 p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-xs text-center">
+            <Pause className="h-16 w-16 text-amber-400 animate-pulse mb-3" />
+            <h2 className="text-2xl font-black tracking-widest text-pink-200">SPIEL PAUSIERT</h2>
+            <p className="text-xs text-purple-200 mt-2 mb-6">Das Geschehen ist eingefroren. Bereite deine nächsten Klicks vor!</p>
+            
+            <button type="button" onClick={() => setIstPausiert(false)}
+              className="flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-r from-pink-500 to-fuchsia-600 px-6 py-3 text-sm font-bold shadow-lg hover:from-pink-400 hover:to-fuchsia-500 active:scale-95 transition">
+              <PlayCircle className="h-4 w-4" /> WEITER
+            </button>
+          </div>
         </div>
       )}
 
