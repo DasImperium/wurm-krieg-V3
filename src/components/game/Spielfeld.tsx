@@ -85,6 +85,7 @@ export function Spielfeld({ fortschritt, level, onZurueck, onSieg, onNiederlage 
     aiSpawn: 0,
     matchAepfelLokal: 0,
     apfelSpawnsImMatch: 0,
+    apfelSpawnsThroughDamage: 0, // Zähler für durch Treffer gespawnte Äpfel
     spielerKanone: 0,
     gegnerKanone: 0,
     kanonenBlitz: [] as Array<{ id: number; seite: "spieler" | "gegner"; zielX: number; bis: number }>,
@@ -147,6 +148,25 @@ export function Spielfeld({ fortschritt, level, onZurueck, onSieg, onNiederlage 
     const bonusSternanis = matchSternanis;
     onSieg(bonusAepfel, bonusSternanis);
   }, [matchAepfel, matchSternanis, onSieg]);
+
+  // Funktion zum Spawnen eines Apfels durch Schaden am feindlichen Baum
+  const trySpawnApfelFromDamage = useCallback(() => {
+    const r = refs.current;
+    // Nur wenn feindlicher Baum unter 80% Leben hat
+    if (gegnerBasisHp < 0.8 * gegnerBasisMax) {
+      // 12% Chance und maximal 12 Äpfel
+      if (Math.random() < 0.12 && r.apfelSpawnsThroughDamage < 12) {
+        r.apfelSpawnsThroughDamage++;
+        r.fall.push({
+          id: fallIdZaehler++,
+          art: "apfel",
+          x: 70 + Math.random() * 20, // Spawn näher am feindlichen Baum (70-90%)
+          y: 0,
+          geschwindigkeit: 0.6,
+        });
+      }
+    }
+  }, [gegnerBasisHp, gegnerBasisMax]);
 
   // Fall-Objekte aufheben
   useEffect(() => {
@@ -321,8 +341,18 @@ export function Spielfeld({ fortschritt, level, onZurueck, onSieg, onNiederlage 
         }
         if (basisDist <= 2 && jetzt >= w.knockbackBis) {
           const dmg = (nahkampfSchaden(w) * TICK_MS) / 1000;
-          if (w.seite === "spieler") setGegnerBasisHp((h) => Math.max(0, h - dmg));
-          else setSpielerBasisHp((h) => Math.max(0, h - dmg));
+          if (w.seite === "spieler") {
+            setGegnerBasisHp((h) => {
+              const newHp = Math.max(0, h - dmg);
+              // Apfel-Spawn bei Treffer auf feindlichen Baum (wenn unter 80% Leben)
+              if (h > newHp) {
+                trySpawnApfelFromDamage();
+              }
+              return newHp;
+            });
+          } else {
+            setSpielerBasisHp((h) => Math.max(0, h - dmg));
+          }
         }
         void hatGebissen;
 
@@ -374,8 +404,18 @@ export function Spielfeld({ fortschritt, level, onZurueck, onSieg, onNiederlage 
             if (zielWurm) {
               schadenAnWurm(zielWurm, schadenWert, jetzt);
             } else {
-              if (w.seite === "spieler") setGegnerBasisHp((h) => Math.max(0, h - schadenWert));
-              else setSpielerBasisHp((h) => Math.max(0, h - schadenWert));
+              if (w.seite === "spieler") {
+                setGegnerBasisHp((h) => {
+                  const newHp = Math.max(0, h - schadenWert);
+                  // Apfel-Spawn bei Treffer auf feindlichen Baum (wenn unter 80% Leben)
+                  if (h > newHp) {
+                    trySpawnApfelFromDamage();
+                  }
+                  return newHp;
+                });
+              } else {
+                setSpielerBasisHp((h) => Math.max(0, h - schadenWert));
+              }
             }
           }
         });
@@ -441,7 +481,7 @@ export function Spielfeld({ fortschritt, level, onZurueck, onSieg, onNiederlage 
       setEffekte([...r.effekte]);
     }, TICK_MS);
     return () => window.clearInterval(handle);
-  }, [produktionsStufe, verteidigungsStufe, fortschritt.upgrades, sieg, niederlage, level, aiSpawnInterval, effLevel, istProzedural, wlr]);
+  }, [produktionsStufe, verteidigungsStufe, fortschritt.upgrades, sieg, niederlage, level, aiSpawnInterval, effLevel, istProzedural, wlr, trySpawnApfelFromDamage]);
 
   // Rendering
   return (
