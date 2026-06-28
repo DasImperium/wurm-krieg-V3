@@ -89,5 +89,15 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.0.16"
+  },
+  "overrides": {
+    "@tanstack/react-start": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "@tanstack/react-router": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
   }
 }
