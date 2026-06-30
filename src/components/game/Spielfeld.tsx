@@ -295,7 +295,8 @@ export function Spielfeld({ stand, setStand, level, beenden }: Props) {
           }
           if (bestes) {
             letzteBaseShoot.current[seite] = jetzt;
-            schadenAnWurm(bestes, BASIS_KANONEN_SCHADEN * baumStufe);
+            const stufe = seite === "spieler" ? baumDefStufe : Math.min(5, 1 + Math.floor(level / 25));
+            schadenAnWurm(bestes, BASIS_KANONEN_SCHADEN * stufe);
           }
         };
         beschiesse("spieler");
@@ -308,7 +309,7 @@ export function Spielfeld({ stand, setStand, level, beenden }: Props) {
       setMinen((mm) => mm.filter((m) => m.bisZeit > jetzt));
     }, TICK);
     return () => clearInterval(iv);
-  }, [ende, pausiert, cfg, stand, baumStufe, baumReichweite, minen.length, spezialAktiv.schildkroeteBis]);
+  }, [ende, pausiert, cfg, stand, baumDefStufe, baumProdStufe, baumReichweite, minen.length, spezialAktiv.schildkroeteBis, level]);
 
   // Tote endgültig entfernen
   useEffect(() => {
