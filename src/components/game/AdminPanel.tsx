@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ArrowLeft, Lock } from "lucide-react";
 import type { Spielstand, SegmentKey, SpezialKey } from "./types";
-import { ALLE_SEGMENT_KEYS } from "./config/segmente";
+import { ALLE_SEGMENT_KEYS, SEGMENTE } from "./config/segmente";
 
 interface Props {
   stand: Spielstand;
@@ -73,6 +73,34 @@ export function AdminPanel({ stand, setStand, zurueck }: Props) {
               Stufe {s}
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="rounded-lg bg-slate-800 p-3 ring-1 ring-white/10">
+        <h2 className="font-bold">Einzelne Segment-Stufen (0 = gesperrt)</h2>
+        <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+          {ALLE_SEGMENT_KEYS.map((k) => {
+            const aktuell = stand.segmentStufen[k] ?? 0;
+            return (
+              <label key={k} className="flex items-center justify-between gap-2 rounded bg-slate-700/60 px-2 py-1 text-xs">
+                <span className="font-semibold">{SEGMENTE[k].name}</span>
+                <select
+                  value={aktuell}
+                  onChange={(e) =>
+                    setStand({
+                      ...stand,
+                      segmentStufen: { ...stand.segmentStufen, [k]: Number(e.target.value) },
+                    })
+                  }
+                  className="rounded bg-slate-900 px-2 py-1 text-white"
+                >
+                  {[0, 1, 2, 3, 4, 5].map((s) => (
+                    <option key={s} value={s}>Stufe {s}</option>
+                  ))}
+                </select>
+              </label>
+            );
+          })}
         </div>
       </div>
 

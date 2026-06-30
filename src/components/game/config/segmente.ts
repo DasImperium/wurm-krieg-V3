@@ -320,8 +320,10 @@ export function baukosten(
   stufe: number,
 ): { blatt: number; sternanis: number } {
   const def = SEGMENTE[key];
+  // Deutlich höher als zuvor, kein freier Bau für Stufe 1 Segmente.
+  const basis = Math.max(12, def.blattKosten * 3);
   return {
-    blatt: Math.round(def.blattKosten * Math.pow(1.25, stufe - 1)),
+    blatt: Math.round(basis * Math.pow(1.45, stufe - 1)),
     sternanis: stufe >= 4 ? def.sternanisBauAb4 : 0,
   };
 }
