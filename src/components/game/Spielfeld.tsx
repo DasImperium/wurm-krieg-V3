@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Apple, Leaf, Pause, Play, Plus } from "lucide-react";
+import { Apple, Leaf, Pause, Play, Plus, Shield, TreePine } from "lucide-react";
 import type { Mine, SegmentKey, SpezialKey, Spielstand, Wurm } from "./types";
 import { SEGMENTE, baukosten } from "./config/segmente";
 import { levelConfig } from "./config/level";
@@ -26,11 +26,9 @@ const BASIS_KANONEN_SCHADEN = 4;
 
 export function Spielfeld({ stand, setStand, level, beenden }: Props) {
   const cfg = useMemo(() => levelConfig(level), [level]);
-  const baumStufe = Math.max(
-    1,
-    Math.min(3, (stand.segmentStufen["panzer"] ?? 1)),
-  );
-  const baumReichweite = [8, 10, 12][baumStufe - 1];
+  const [baumProdStufe, setBaumProdStufe] = useState(1);
+  const [baumDefStufe, setBaumDefStufe] = useState(1);
+  const baumReichweite = [8, 11, 14, 17, 20][Math.min(4, baumDefStufe - 1)];
 
   const [wuermer, setWuermer] = useState<Wurm[]>([]);
   const [minen, setMinen] = useState<Mine[]>([]);
