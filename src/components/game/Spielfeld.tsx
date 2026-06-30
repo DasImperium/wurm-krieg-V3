@@ -51,6 +51,20 @@ export function Spielfeld({ stand, setStand, level, beenden }: Props) {
   const letzteBlattZeit = useRef(performance.now());
   const letzteBaseShoot = useRef({ spieler: 0, feind: 0 });
 
+  // --- Baum Upgrades --------------------------------------------------------
+  const prodKosten = 40 + (baumProdStufe - 1) * 60;
+  const defKosten = 60 + (baumDefStufe - 1) * 80;
+  const upgradeProd = () => {
+    if (blatt < prodKosten || baumProdStufe >= 5) return;
+    setBlatt((b) => b - prodKosten);
+    setBaumProdStufe((s) => s + 1);
+  };
+  const upgradeDef = () => {
+    if (blatt < defKosten || baumDefStufe >= 5) return;
+    setBlatt((b) => b - defKosten);
+    setBaumDefStufe((s) => s + 1);
+  };
+
   // --- Spezialfähigkeit aktivieren -----------------------------------------
   const aktiviereSpezial = (k: SpezialKey) => {
     if ((vorrat[k] ?? 0) <= 0) return;
@@ -115,7 +129,7 @@ export function Spielfeld({ stand, setStand, level, beenden }: Props) {
 
       // Blätter generieren
       if (jetzt - letzteBlattZeit.current > 1000) {
-        setBlatt((b) => Math.min(999, b + 5));
+        setBlatt((b) => Math.min(999, b + 3 + baumProdStufe * 2));
         if (Math.random() < 0.08) setSternanisRunde((s) => s + 1);
         letzteBlattZeit.current = jetzt;
       }
