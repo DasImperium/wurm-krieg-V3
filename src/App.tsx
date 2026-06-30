@@ -1,37 +1,77 @@
-import React, { useState } from 'react';
-import Hauptmenue from './components/game/Hauptmenue';
-import Spielfeld from './components/game/Spielfeld';
-import Ueberfall from './components/game/Ueberfall';
-import AdminPanel from './components/game/AdminPanel';
+import { useState } from "react";
+import { useSpielstand, resetSpielstand } from "./components/game/state/spielstand";
+import Hauptmenue from "./components/game/Hauptmenue";
+import Spielfeld from "./components/game/Spielfeld";
+import AdminPanel from "./components/game/AdminPanel";
+import Ueberfall from "./components/game/Ueberfall";
+import Forschung from "./components/game/screens/Forschung";
+import LevelAuswahl from "./components/game/screens/LevelAuswahl";
+import LoadoutAuswahl from "./components/game/screens/LoadoutAuswahl";
+import Anleitung from "./components/game/screens/Anleitung";
+
+type Ansicht =
+  | "menu"
+  | "forschung"
+  | "level"
+  | "loadout"
+  | "game"
+  | "anleitung"
+  | "minigame"
+  | "admin";
 
 export default function App() {
-  const [view, setView] = useState<'menu' | 'game' | 'minigame' | 'admin'>('menu');
-  
-  // Startwerte für Äpfel und Sterne aus deinem Spiel-Design
-  const [playerData, setPlayerData] = useState({
-    name: 'Spieler',
-    apples: 5,
-    stars: 0,
-    level: 1
-  });
+  const [stand, setStand] = useSpielstand();
+  const [ansicht, setAnsicht] = useState<Ansicht>("menu");
+  const [aktivesLevel, setAktivesLevel] = useState(1);
 
   return (
-    <div className="min-h-screen w-full bg-slate-900 text-white flex flex-col items-center justify-center p-4">
-      {view === 'menu' && (
-        <Hauptmenue playerData={playerData} setView={setView} setPlayerData={setPlayerData} />
+    <div className="min-h-screen w-full bg-slate-900 p-4 text-white">
+      {ansicht === "menu" && (
+        <Hauptmenue
+          stand={stand}
+          setStand={setStand}
+          zuLevel={() => setAnsicht("level")}
+          zuForschung={() => setAnsicht("forschung")}
+          zuAnleitung={() => setAnsicht("anleitung")}
+          zuMinigame={() => setAnsicht("minigame")}
+          zuAdmin={() => setAnsicht("admin")}
+          reset={() => setStand(resetSpielstand())}
+        />
       )}
-      
-      {view === 'game' && (
-        <Spielfeld playerData={playerData} setView={setView} />
+
+      {ansicht === "forschung" && (
+        <Forschung stand={stand} setStand={setStand} zurueck={() => setAnsicht("menu")} />
       )}
-      
-      {view === 'minigame' && (
-        <Ueberfall playerData={playerData} setView={setView} />
+
+      {ansicht === "level" && (
+        <LevelAuswahl
+          stand={stand}
+          start={(lvl) => { setAktivesLevel(lvl); setAnsicht("loadout"); }}
+          zurueck={() => setAnsicht("menu")}
+        />
       )}
-      
-      {view === 'admin' && (
-        <AdminPanel playerData={playerData} setView={setView} />
+
+      {ansicht === "loadout" && (
+        <LoadoutAuswahl
+          stand={stand}
+          setStand={setStand}
+          weiter={() => setAnsicht("game")}
+          zurueck={() => setAnsicht("level")}
+        />
       )}
+
+      {ansicht === "game" && (
+        <Spielfeld
+          stand={stand}
+          setStand={setStand}
+          level={aktivesLevel}
+          beenden={() => setAnsicht("menu")}
+        />
+      )}
+
+      {ansicht === "anleitung" && <Anleitung zurueck={() => setAnsicht("menu")} />}
+      {ansicht === "minigame" && <Ueberfall zurueck={() => setAnsicht("menu")} />}
+      {ansicht === "admin" && <AdminPanel stand={stand} setStand={setStand} zurueck={() => setAnsicht("menu")} />}
     </div>
   );
 }
