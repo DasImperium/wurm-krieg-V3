@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Apple, Leaf, Pause, Play, Plus } from "lucide-react";
+import { Apple, Leaf, Pause, Play, Plus, Shield, TreePine } from "lucide-react";
 import type { Mine, SegmentKey, SpezialKey, Spielstand, Wurm } from "./types";
 import { SEGMENTE, baukosten } from "./config/segmente";
 import { levelConfig } from "./config/level";
@@ -26,11 +26,9 @@ const BASIS_KANONEN_SCHADEN = 4;
 
 export function Spielfeld({ stand, setStand, level, beenden }: Props) {
   const cfg = useMemo(() => levelConfig(level), [level]);
-  const baumStufe = Math.max(
-    1,
-    Math.min(3, (stand.segmentStufen["panzer"] ?? 1)),
-  );
-  const baumReichweite = [8, 10, 12][baumStufe - 1];
+  const [baumProdStufe, setBaumProdStufe] = useState(1);
+  const [baumDefStufe, setBaumDefStufe] = useState(1);
+  const baumReichweite = [8, 11, 14, 17, 20][Math.min(4, baumDefStufe - 1)];
 
   const [wuermer, setWuermer] = useState<Wurm[]>([]);
   const [minen, setMinen] = useState<Mine[]>([]);
@@ -52,6 +50,20 @@ export function Spielfeld({ stand, setStand, level, beenden }: Props) {
   const letzteKiSpawn = useRef(0);
   const letzteBlattZeit = useRef(performance.now());
   const letzteBaseShoot = useRef({ spieler: 0, feind: 0 });
+
+  // --- Baum Upgrades --------------------------------------------------------
+  const prodKosten = 40 + (baumProdStufe - 1) * 60;
+  const defKosten = 60 + (baumDefStufe - 1) * 80;
+  const upgradeProd = () => {
+    if (blatt < prodKosten || baumProdStufe >= 5) return;
+    setBlatt((b) => b - prodKosten);
+    setBaumProdStufe((s) => s + 1);
+  };
+  const upgradeDef = () => {
+    if (blatt < defKosten || baumDefStufe >= 5) return;
+    setBlatt((b) => b - defKosten);
+    setBaumDefStufe((s) => s + 1);
+  };
 
   // --- Spezialfähigkeit aktivieren -----------------------------------------
   const aktiviereSpezial = (k: SpezialKey) => {
@@ -117,7 +129,7 @@ export function Spielfeld({ stand, setStand, level, beenden }: Props) {
 
       // Blätter generieren
       if (jetzt - letzteBlattZeit.current > 1000) {
-        setBlatt((b) => Math.min(999, b + 5));
+        setBlatt((b) => Math.min(999, b + 3 + baumProdStufe * 2));
         if (Math.random() < 0.08) setSternanisRunde((s) => s + 1);
         letzteBlattZeit.current = jetzt;
       }
@@ -297,7 +309,8 @@ export function Spielfeld({ stand, setStand, level, beenden }: Props) {
           }
           if (bestes) {
             letzteBaseShoot.current[seite] = jetzt;
-            schadenAnWurm(bestes, BASIS_KANONEN_SCHADEN * baumStufe);
+            const stufe = seite === "spieler" ? baumDefStufe : Math.min(5, 1 + Math.floor(level / 25));
+            schadenAnWurm(bestes, BASIS_KANONEN_SCHADEN * stufe);
           }
         };
         beschiesse("spieler");
@@ -310,7 +323,7 @@ export function Spielfeld({ stand, setStand, level, beenden }: Props) {
       setMinen((mm) => mm.filter((m) => m.bisZeit > jetzt));
     }, TICK);
     return () => clearInterval(iv);
-  }, [ende, pausiert, cfg, stand, baumStufe, baumReichweite, minen.length, spezialAktiv.schildkroeteBis]);
+  }, [ende, pausiert, cfg, stand, baumDefStufe, baumProdStufe, baumReichweite, minen.length, spezialAktiv.schildkroeteBis, level]);
 
   // Tote endgültig entfernen
   useEffect(() => {
@@ -371,6 +384,22 @@ export function Spielfeld({ stand, setStand, level, beenden }: Props) {
           <span className="flex items-center gap-1"><Sternanis className="h-3.5 w-3.5" /> {sternanisRunde}</span>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={upgradeProd}
+            disabled={blatt < prodKosten || baumProdStufe >= 5}
+            className="hidden sm:flex items-center gap-1 rounded bg-lime-700 px-2 py-1 text-xs font-bold hover:bg-lime-600 disabled:opacity-40"
+            title="Baum: Produktion verbessern"
+          >
+            <TreePine className="h-3.5 w-3.5" /> Prod L{baumProdStufe} ({prodKosten}🍃)
+          </button>
+          <button
+            onClick={upgradeDef}
+            disabled={blatt < defKosten || baumDefStufe >= 5}
+            className="hidden sm:flex items-center gap-1 rounded bg-sky-700 px-2 py-1 text-xs font-bold hover:bg-sky-600 disabled:opacity-40"
+            title="Baum: Verteidigung verbessern"
+          >
+            <Shield className="h-3.5 w-3.5" /> Def L{baumDefStufe} ({defKosten}🍃)
+          </button>
           <button
             onClick={() => setBauerOffen(true)}
             className="flex items-center gap-1 rounded bg-emerald-600 px-2 py-1 text-xs font-bold hover:bg-emerald-500"
@@ -475,36 +504,71 @@ export function Spielfeld({ stand, setStand, level, beenden }: Props) {
         />
       )}
 
-      {/* Sammelbarer Apfel: einfache Klick-Mechanik */}
-      <ApfelSammler addApfel={() => setEingesammelteAepfel((n) => n + 1)} />
+        {/* Sammelbare Beute: Äpfel & Blätter fallen von oben */}
+        <FallendeBeute
+          addApfel={() => setEingesammelteAepfel((n) => n + 1)}
+          addBlatt={(n) => setBlatt((b) => Math.min(999, b + n))}
+        />
     </div>
   );
 }
 
-function ApfelSammler({ addApfel }: { addApfel: () => void }) {
-  const [pos, setPos] = useState<{ x: number; y: number; id: number } | null>(null);
+interface FallObj {
+  id: number;
+  x: number;
+  art: "apfel" | "blatt";
+  start: number;
+  dauer: number;
+}
+
+function FallendeBeute({ addApfel, addBlatt }: { addApfel: () => void; addBlatt: (n: number) => void }) {
+  const [items, setItems] = useState<FallObj[]>([]);
+  const [, force] = useState(0);
   useEffect(() => {
     const iv = setInterval(() => {
-      if (Math.random() < 0.6) {
-        setPos({ x: 10 + Math.random() * 80, y: 30 + Math.random() * 40, id: Math.random() });
-      }
-    }, 5000);
-    return () => clearInterval(iv);
+      setItems((cur) => {
+        const jetzt = performance.now();
+        const aktiv = cur.filter((i) => jetzt - i.start < i.dauer + 600);
+        if (Math.random() < 0.8) {
+          aktiv.push({
+            id: Math.random(),
+            x: 8 + Math.random() * 84,
+            art: Math.random() < 0.45 ? "apfel" : "blatt",
+            start: jetzt,
+            dauer: 4500 + Math.random() * 2000,
+          });
+        }
+        return aktiv;
+      });
+    }, 1500);
+    const tick = setInterval(() => force((n) => (n + 1) % 1000), 60);
+    return () => { clearInterval(iv); clearInterval(tick); };
   }, []);
-  if (!pos) return null;
+  const jetzt = performance.now();
   return (
-    <button
-      key={pos.id}
-      onClick={() => {
-        addApfel();
-        setPos(null);
-      }}
-      className="absolute z-30 -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500 p-2 shadow-lg ring-2 ring-red-900 hover:scale-110"
-      style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-      aria-label="Apfel einsammeln"
-    >
-      <Apple className="h-4 w-4 text-white" />
-    </button>
+    <>
+      {items.map((i) => {
+        const t = Math.min(1, (jetzt - i.start) / i.dauer);
+        const top = -5 + t * 92;
+        return (
+          <button
+            key={i.id}
+            onClick={() => {
+              if (i.art === "apfel") addApfel();
+              else addBlatt(8);
+              setItems((cur) => cur.filter((x) => x.id !== i.id));
+            }}
+            className={`absolute z-30 -translate-x-1/2 rounded-full p-2 shadow-lg ring-2 hover:scale-110 ${
+              i.art === "apfel" ? "bg-red-500 ring-red-900" : "bg-emerald-500 ring-emerald-900"
+            }`}
+            style={{ left: `${i.x}%`, top: `${top}%` }}
+            aria-label={i.art === "apfel" ? "Apfel einsammeln" : "Blatt einsammeln"}
+          >
+            {i.art === "apfel" ? <Apple className="h-4 w-4 text-white" /> : <Leaf className="h-4 w-4 text-white" />}
+          </button>
+        );
+      })}
+    </>
   );
 }
 

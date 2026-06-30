@@ -70,7 +70,7 @@ export default function App() {
       )}
 
       {ansicht === "anleitung" && <Anleitung zurueck={() => setAnsicht("menu")} />}
-      {ansicht === "minigame" && <Ueberfall zurueck={() => setAnsicht("menu")} />}
+      {ansicht === "minigame" && <Ueberfall stand={stand} setStand={setStand} zurueck={() => setAnsicht("menu")} />}
       {ansicht === "admin" && <AdminPanel stand={stand} setStand={setStand} zurueck={() => setAnsicht("menu")} />}
     </div>
   );
